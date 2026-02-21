@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="New Minesweeper/New Minesweeper.vcxproj" Id="0bda56d0-0552-4bda-b575-78c68d07240a" />
+</Solution>
