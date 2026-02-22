@@ -58,11 +58,11 @@ POINT cur_pos{};
 
 D2D1_RECT_F b1Rect{ 40.0f, 0, scr_width / 3.0f - 50.0f, 50.0f };
 D2D1_RECT_F b2Rect{ scr_width / 3.0f + 40.0f, 0, scr_width * 2.0f / 3.0f - 50.0f, 50.0f };
-D2D1_RECT_F b3Rect{ scr_width * 2.0f / 3.0f + 40.0f, 0, scr_width - 90.0f, 50.0f };
+D2D1_RECT_F b3Rect{ scr_width * 2.0f / 3.0f + 40.0f, 0, scr_width - 70.0f, 50.0f };
 
 D2D1_RECT_F b1TxtRect{ 60.0f, 10.0f, scr_width / 3.0f - 50.0f, 50.0f };
 D2D1_RECT_F b2TxtRect{ scr_width / 3.0f + 60.0f, 10.0f, scr_width * 2.0f / 3.0f - 50.0f, 50.0f };
-D2D1_RECT_F b3TxtRect{ scr_width * 2.0f / 3.0f + 60.0f, 10.0f, scr_width - 90.0f, 50.0f };
+D2D1_RECT_F b3TxtRect{ scr_width * 2.0f / 3.0f + 60.0f, 10.0f, scr_width - 70.0f, 50.0f };
 
 bool pause{ false };
 bool sound{ true };
@@ -81,6 +81,9 @@ int level = 1;
 int score = 0;
 int mins = 0;
 int secs = 0;
+
+int current_level_rows = 0;
+int current_level_cols = 0;
 
 float scale_x{ 0 };
 float scale_y{ 0 };
@@ -132,7 +135,15 @@ struct FLAG
 dll::GRID* Grid{ nullptr };
 dll::RANDIT RandIt{};
 
-
+struct TILEINFO
+{
+	D2D1_RECT_F dims{};
+	int content{};
+	int number{};
+	bool active = false;
+	bool suspicious = false;
+};
+std::vector<TILEINFO>vTiles;
 
 
 
@@ -242,8 +253,30 @@ void InitGame()
 	mins = 0;
 	secs = 0;
 
+	current_level_rows = 0;
+	current_level_cols = 0;
+
 	FreeMem(&Grid);
 	Grid = new dll::GRID(LEVEL1_ROWS, LEVEL1_COLS, 1);
+
+	current_level_rows = LEVEL1_ROWS;
+	current_level_cols = LEVEL1_COLS;
+
+	vTiles.clear();
+	for (int rows = 0; rows < LEVEL1_ROWS; ++rows)
+	{
+		for (int cols = 0; cols < LEVEL1_COLS; ++cols)
+		{
+			TILEINFO dummy{};
+			FRECT temp{ Grid->GetTileDims(rows,cols) };
+			dummy.dims.left = temp.left;
+			dummy.dims.right = temp.right;
+			dummy.dims.top = temp.up;
+			dummy.dims.bottom = temp.down;
+			dummy.number = rows * current_level_cols + cols;
+			vTiles.push_back(dummy);
+		}
+	}
 }
 
 INT_PTR CALLBACK DlgProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lParam)
@@ -460,8 +493,47 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 		}
 		break;
 
+	case WM_LBUTTONDOWN:
+		if (Grid && !vTiles.empty())
+		{
+			float tx = LOWORD(lParam) * scale_x;
+			float ty = HIWORD(lParam) * scale_y;
 
+			for (int rows = 0; rows < current_level_rows; ++rows)
+			{
+				bool found = false;
+				
+				for (int cols = 0; cols < current_level_cols; ++cols)
+				{
+					FRECT dummy = Grid->GetTileDims(rows, cols);
 
+					if (tx >= dummy.left && tx <= dummy.right && ty >= dummy.up && ty <= dummy.down)
+					{
+						int tile_content = Grid->SelectTile(rows, cols);
+
+						if (tile_content == MINE)bomb_exploded = true;
+
+						for (int count = 0; count < vTiles.size(); ++count)
+						{
+							if (vTiles[count].dims.left == dummy.left && vTiles[count].dims.right == dummy.right
+								&& vTiles[count].dims.top == dummy.up && vTiles[count].dims.bottom == dummy.down)
+							{
+								vTiles[count].content = tile_content;
+								vTiles[count].active = Grid->IsTileSelected(rows, cols);
+								break;
+							}
+						}
+						
+						found = true;
+					}
+
+					if (found)break;
+				}
+				
+				if (found)break;
+			}
+		}
+		break;
 
 
 
@@ -784,7 +856,70 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 			if (!b3Hglt)Draw->DrawTextW(L"ПОМОЩ ЗА ИГРАТА", 16, nrmFormat, b3TxtRect, txtBrush);
 			else Draw->DrawTextW(L"ПОМОЩ ЗА ИГРАТА", 16, nrmFormat, b3TxtRect, hgltBrush);
 		}
+		
+		if (!vTiles.empty() && statBrush &&midFormat)
+		{
+			for (int i = 0; i < vTiles.size(); ++i)
+			{
+				Draw->DrawRectangle(vTiles[i].dims, statBrush, 2.0f);
+				
+				if (!vTiles[i].active)continue;
 
+				switch (vTiles[i].content)
+				{
+				
+				case 0:
+					Draw->FillRectangle(D2D1::RectF(vTiles[i].dims.left + 15.0f, vTiles[i].dims.top + 10.0f, 
+						vTiles[i].dims.right - 10.0f, vTiles[i].dims.bottom - 10.0f), N8Brush);
+					break;
+
+				case 1:
+					Draw->DrawTextW(L"1", 1, midFormat, D2D1::RectF(vTiles[i].dims.left + 15.0f, vTiles[i].dims.top + 10.0f, 
+						vTiles[i].dims.right, vTiles[i].dims.bottom), N1Brush);
+					break;
+				
+				case 2:
+					Draw->DrawTextW(L"2", 1, midFormat, D2D1::RectF(vTiles[i].dims.left + 15.0f, vTiles[i].dims.top + 10.0f, 
+						vTiles[i].dims.right, vTiles[i].dims.bottom), N2Brush);
+					break;
+
+				case 3:
+					Draw->DrawTextW(L"3", 1, midFormat, D2D1::RectF(vTiles[i].dims.left + 15.0f, vTiles[i].dims.top + 10.0f, 
+						vTiles[i].dims.right, vTiles[i].dims.bottom), N3Brush);
+					break;
+
+				case 4:
+					Draw->DrawTextW(L"4", 1, midFormat, D2D1::RectF(vTiles[i].dims.left + 15.0f, vTiles[i].dims.top + 10.0f, 
+						vTiles[i].dims.right, vTiles[i].dims.bottom), N4Brush);
+					break;
+
+				case 5:
+					Draw->DrawTextW(L"5", 1, midFormat, D2D1::RectF(vTiles[i].dims.left + 15.0f, vTiles[i].dims.top + 10.0f, 
+						vTiles[i].dims.right, vTiles[i].dims.bottom), N5Brush);
+					break;
+
+				case 6:
+					Draw->DrawTextW(L"1", 1, midFormat, D2D1::RectF(vTiles[i].dims.left + 15.0f, vTiles[i].dims.top + 10.0f, 
+						vTiles[i].dims.right, vTiles[i].dims.bottom), N6Brush);
+					break;
+				
+				case 7:
+					Draw->DrawTextW(L"1", 1, midFormat, D2D1::RectF(vTiles[i].dims.left + 15.0f, vTiles[i].dims.top + 10.0f, 
+						vTiles[i].dims.right, vTiles[i].dims.bottom), N7Brush);
+					break;
+
+				case 8:
+					Draw->DrawTextW(L"1", 1, midFormat, D2D1::RectF(vTiles[i].dims.left + 15.0f, vTiles[i].dims.top + 10.0f, 
+						vTiles[i].dims.right, vTiles[i].dims.bottom), N8Brush);
+					break;
+				
+				
+				
+				default:
+					break;
+				}
+			}
+		}
 
 	////////////////////////////////////////////////////////////
 

@@ -89,10 +89,11 @@ namespace dll
 		void Release();
 
 		int MinesRemaining()const;
-		void MineFound(int row, int col);
-
+		void MineMarked(int row, int col, bool mark_it);
+		bool IsTileSelected(int row, int col) const;
 		int SelectTile(int row, int col);
 		int ShowTileInfo(int row, int col);
+		FRECT GetTileDims(int row, int col) const;
 	};
 
 }
