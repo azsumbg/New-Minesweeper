@@ -145,7 +145,7 @@ struct TILEINFO
 };
 std::vector<TILEINFO>vTiles;
 
-
+D2D1_RECT_F Explosion{};
 
 
 
@@ -494,6 +494,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 		break;
 
 	case WM_LBUTTONDOWN:
+		if (bomb_exploded)break;
 		if (Grid && !vTiles.empty())
 		{
 			float tx = LOWORD(lParam) * scale_x;
@@ -511,7 +512,15 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 					{
 						int tile_content = Grid->SelectTile(rows, cols);
 
-						if (tile_content == MINE)bomb_exploded = true;
+						if (tile_content == MINE)
+						{
+							bomb_exploded = true;
+							Explosion.left = dummy.left;
+							Explosion.right = dummy.right;
+							Explosion.top = dummy.up;
+							Explosion.bottom = dummy.down;
+							if (sound)mciSendString(L"play .\\res\\snd\\explosion.wav", NULL, NULL, NULL);
+						}
 
 						for (int count = 0; count < vTiles.size(); ++count)
 						{
@@ -535,7 +544,9 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 		}
 		break;
 
+	case WM_RBUTTONDOWN:
 
+		break;
 
 
 
@@ -767,7 +778,7 @@ void CreateResources()
 	{
 		mciSendString(L"play .\\res\\snd\\intro.wav", NULL, NULL, NULL);
 
-		for (int i = 0; i < 120; ++i)
+		for (int i = 0; i < 100; ++i)
 		{
 			Draw->BeginDraw();
 			Draw->Clear(D2D1::ColorF(D2D1::ColorF::LightSlateGray));
@@ -923,7 +934,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
 	////////////////////////////////////////////////////////////
 
+		if (bomb_exploded)
+		{
+			static int explosion_frame = 0;
+			static int explosion_delay = 3;
+			if (explosion_frame <= 23)Draw->DrawBitmap(bmpExplosion[explosion_frame], Explosion);
+			--explosion_delay;
+			if (explosion_delay <= 0)
+			{
+				explosion_delay = 3;
+				++explosion_frame;
 
+				if (explosion_frame > 23)
+				{
+					Draw->EndDraw();
+					GameOver();
+				}
+			}
+		}
 
 
 
