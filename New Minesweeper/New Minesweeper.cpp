@@ -142,6 +142,7 @@ struct TILEINFO
 	int number{};
 	bool active = false;
 	bool suspicious = false;
+	FLAG flag_info{};
 };
 std::vector<TILEINFO>vTiles;
 
@@ -545,7 +546,51 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 		break;
 
 	case WM_RBUTTONDOWN:
+		if (bomb_exploded)break;
+		if (Grid && !vTiles.empty())
+		{
+			float tx = LOWORD(lParam) * scale_x;
+			float ty = HIWORD(lParam) * scale_y;
 
+			for (int rows = 0; rows < current_level_rows; ++rows)
+			{
+				bool found = false;
+
+				for (int cols = 0; cols < current_level_cols; ++cols)
+				{
+					FRECT dummy = Grid->GetTileDims(rows, cols);
+
+					if (tx >= dummy.left && tx <= dummy.right && ty >= dummy.up && ty <= dummy.down)
+					{	
+						for (int count = 0; count < vTiles.size(); ++count)
+						{
+							if (vTiles[count].dims.left == dummy.left && vTiles[count].dims.right == dummy.right
+								&& vTiles[count].dims.top == dummy.up && vTiles[count].dims.bottom == dummy.down)
+							{
+								if (vTiles[count].active)break;
+								Grid->MineMarked(rows, cols, vTiles[count].suspicious);
+								vTiles[count].suspicious = !vTiles[count].suspicious;
+								if (!vTiles[count].suspicious)
+								{
+									vTiles[count].flag_info.loc.left = dummy.left + 15.0f;
+									vTiles[count].flag_info.loc.right = dummy.right;
+									vTiles[count].flag_info.loc.top = dummy.up + 10.0f;
+									vTiles[count].flag_info.loc.bottom = dummy.down;
+									vTiles[count].flag_info.frame = 0;
+								}
+								break;
+							}
+						}
+
+						found = true;
+					}
+
+					if (found)break;
+				}
+
+				if (found)break;
+			}
+		}
 		break;
 
 
@@ -874,7 +919,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 			{
 				Draw->DrawRectangle(vTiles[i].dims, statBrush, 2.0f);
 				
-				if (!vTiles[i].active)continue;
+				if (!vTiles[i].active && !vTiles[i].suspicious)continue;
+				else if (vTiles[i].suspicious)
+				{
+					Draw->DrawBitmap(bmpFlag[vTiles[i].flag_info.frame], vTiles[i].flag_info.loc);
+					++vTiles[i].flag_info.frame;
+					if (vTiles[i].flag_info.frame > 99)vTiles[i].flag_info.frame = 0;
+					continue;
+				}
 
 				switch (vTiles[i].content)
 				{
