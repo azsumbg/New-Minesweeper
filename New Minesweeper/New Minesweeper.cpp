@@ -240,6 +240,22 @@ int IntroFrame()
 void GameOver()
 {
 	KillTimer(bHwnd, bTimer);
+	PlaySound(NULL, NULL, NULL);
+	if (turn_the_game)
+	{
+		int bonus_time = 200 + 60 * level;
+		if (secs < bonus_time)score += bonus_time - secs;
+
+		Draw->BeginDraw();
+		Draw->DrawBitmap(bmpIntro[9], D2D1::RectF(0, 0, scr_width, scr_height));
+		Draw->DrawTextW(L"ПРЕВЪРТЯ ИГРАТА !", 18, bigFormat, D2D1::RectF(100.0f, scr_height / 2.0f - 100.0f, scr_width, scr_height),
+			txtBrush);
+		Draw->EndDraw();
+		if (sound)mciSendString(L"play .\\res\\snd\\levelup.wav", NULL, NULL, NULL);
+		Sleep(2500);
+		score += 1000;
+	};
+
 
 
 
@@ -260,7 +276,7 @@ void InitGame()
 	current_level_rows = 0;
 	current_level_cols = 0;
 
-	FreeMem(&Grid);
+	if(Grid)delete Grid;
 	Grid = new dll::GRID(LEVEL1_ROWS, LEVEL1_COLS, 1);
 
 	current_level_rows = LEVEL1_ROWS;
@@ -307,8 +323,9 @@ void LevelUp()
 	current_level_rows = 0;
 	current_level_cols = 0;
 
-	FreeMem(&Grid);
-	
+	delete Grid;
+	Grid = nullptr;
+
 	switch (level)
 	{
 	case 2:
@@ -332,10 +349,13 @@ void LevelUp()
 	default: turn_the_game = true;
 	}
 
+	if (turn_the_game)GameOver();
+
 	vTiles.clear();
-	for (int rows = 0; rows < LEVEL1_ROWS; ++rows)
+	if(Grid)
+	for (int rows = 0; rows < current_level_rows; ++rows)
 	{
-		for (int cols = 0; cols < LEVEL1_COLS; ++cols)
+		for (int cols = 0; cols < current_level_cols; ++cols)
 		{
 			TILEINFO dummy{};
 			FRECT temp{ Grid->GetTileDims(rows,cols) };

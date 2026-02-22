@@ -16,17 +16,17 @@ constexpr float ground{ 50.0f };
 
 constexpr float CELL_DIM{ 50.0f };
 
-constexpr int LEVEL1_ROWS{ 9 };
-constexpr int LEVEL1_COLS{ 5 };
+constexpr int LEVEL1_ROWS{ 5 };
+constexpr int LEVEL1_COLS{ 9 };
 
-constexpr int LEVEL2_ROWS{ 11 };
-constexpr int LEVEL2_COLS{ 6 };
+constexpr int LEVEL2_ROWS{ 6 };
+constexpr int LEVEL2_COLS{ 11 };
 
-constexpr int LEVEL3_ROWS{ 13 };
-constexpr int LEVEL3_COLS{ 8 };
+constexpr int LEVEL3_ROWS{ 8 };
+constexpr int LEVEL3_COLS{ 13 };
 
-constexpr int LEVEL4_ROWS{ 15 };
-constexpr int LEVEL4_COLS{ 10 };
+constexpr int LEVEL4_ROWS{ 10 };
+constexpr int LEVEL4_COLS{ 15 };
 
 constexpr int LEVEL1_MINES{ 8 };
 constexpr int LEVEL2_MINES{ 10 };
@@ -86,8 +86,7 @@ namespace dll
 	public:
 		GRID(int rows_number, int cols_number, int level);
 		~GRID();
-		void Release();
-
+	
 		int MinesRemaining()const;
 		void MineMarked(int row, int col, bool mark_it);
 		bool IsTileSelected(int row, int col) const;
