@@ -74,6 +74,8 @@ bool b3Hglt{ false };
 bool name_set{ false };
 
 bool bomb_exploded{ false };
+bool turn_the_game{ false };
+bool level_skipped = false;
 
 wchar_t current_player[16]{ L"TARLYO" };
 
@@ -253,6 +255,7 @@ void InitGame()
 	score = 0;
 	mins = 0;
 	secs = 0;
+	level_skipped = false;
 
 	current_level_rows = 0;
 	current_level_cols = 0;
@@ -262,6 +265,72 @@ void InitGame()
 
 	current_level_rows = LEVEL1_ROWS;
 	current_level_cols = LEVEL1_COLS;
+
+	vTiles.clear();
+	for (int rows = 0; rows < LEVEL1_ROWS; ++rows)
+	{
+		for (int cols = 0; cols < LEVEL1_COLS; ++cols)
+		{
+			TILEINFO dummy{};
+			FRECT temp{ Grid->GetTileDims(rows,cols) };
+			dummy.dims.left = temp.left;
+			dummy.dims.right = temp.right;
+			dummy.dims.top = temp.up;
+			dummy.dims.bottom = temp.down;
+			dummy.number = rows * current_level_cols + cols;
+			vTiles.push_back(dummy);
+		}
+	}
+}
+void LevelUp()
+{
+	if (!level_skipped)
+	{
+		int bonus_time = 200 + 60 * level;
+		if (secs < bonus_time)score += bonus_time - secs;
+
+		Draw->BeginDraw();
+		Draw->DrawBitmap(bmpIntro[9], D2D1::RectF(0, 0, scr_width, scr_height));
+		Draw->DrawTextW(L"НИВОТО ИЗЧИСТЕНО !", 19, bigFormat, D2D1::RectF(100.0f, scr_height / 2.0f - 100.0f, scr_width, scr_height),
+			txtBrush);
+		Draw->EndDraw();
+		if (sound)mciSendString(L"play .\\res\\snd\\levelup.wav", NULL, NULL, NULL);
+		Sleep(4000);
+	};
+	level_skipped = false;
+
+	mins = 0;
+	secs = 0;
+
+	++level;
+
+	current_level_rows = 0;
+	current_level_cols = 0;
+
+	FreeMem(&Grid);
+	
+	switch (level)
+	{
+	case 2:
+		Grid = new dll::GRID(LEVEL2_ROWS, LEVEL2_COLS, 2);
+		current_level_rows = LEVEL2_ROWS;
+		current_level_cols = LEVEL2_COLS;
+		break;
+
+	case 3:
+		Grid = new dll::GRID(LEVEL3_ROWS, LEVEL3_COLS, 3);
+		current_level_rows = LEVEL3_ROWS;
+		current_level_cols = LEVEL3_COLS;
+		break;
+
+	case 4:
+		Grid = new dll::GRID(LEVEL4_ROWS, LEVEL4_COLS, 4);
+		current_level_rows = LEVEL4_ROWS;
+		current_level_cols = LEVEL4_COLS;
+		break;
+
+	default: turn_the_game = true;
+	}
 
 	vTiles.clear();
 	for (int rows = 0; rows < LEVEL1_ROWS; ++rows)
@@ -483,7 +552,8 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 				pause = false;
 				break;
 			}
-			//LevelUp();
+			level_skipped = true;
+			LevelUp();
 			break;
 
 		case mExit:
@@ -1005,7 +1075,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 			}
 		}
 
-
+		if (Grid)
+		{
+			if (Grid->MinesRemaining() == 0)LevelUp();
+		}
 
 
 
