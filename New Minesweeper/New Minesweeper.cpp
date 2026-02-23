@@ -1023,8 +1023,8 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 								&& vTiles[count].dims.top == dummy.up && vTiles[count].dims.bottom == dummy.down)
 							{
 								if (vTiles[count].active)break;
-								Grid->MineMarked(rows, cols, vTiles[count].suspicious);
-								vTiles[count].suspicious = !vTiles[count].suspicious;
+								if (!vTiles[count].suspicious)Grid->MineMarked(rows, cols, true);
+								else Grid->MineMarked(rows, cols, false);
 								if (!vTiles[count].suspicious)
 								{
 									vTiles[count].flag_info.loc.left = dummy.left + 15.0f;
@@ -1033,6 +1033,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 									vTiles[count].flag_info.loc.bottom = dummy.down;
 									vTiles[count].flag_info.frame = 0;
 								}
+								vTiles[count].suspicious = !vTiles[count].suspicious;
 								break;
 							}
 						}
@@ -1457,7 +1458,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
 		if (Grid)
 		{
-			if (Grid->MinesRemaining() == 0)LevelUp();
+			if (Grid->MinesRemaining() == 0)
+			{
+				Draw->EndDraw();
+				LevelUp();
+			}
 		}
 
 		if (txtBrush && midFormat)
