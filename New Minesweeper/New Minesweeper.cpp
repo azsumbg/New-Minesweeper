@@ -463,8 +463,62 @@ void HallOfFame()
 
 	if (sound)mciSendString(L"play .\\res\\snd\\show_rec.wav", NULL, NULL, NULL);
 	Sleep(4000);
-
 }
+void ShowHelp()
+{
+	int result{ 0 };
+	CheckFile(help_file, &result);
+
+	if (result == FILE_NOT_EXIST)
+	{
+		if (sound)mciSendString(L"play .\\res\\snd\\negative.wav", NULL, NULL, NULL);
+		MessageBox(bHwnd, L"Липсва помощна информация за играта !\n\nСвържете се с разработчика !", L"Липсва файл",
+			MB_OK | MB_APPLMODAL | MB_ICONINFORMATION);
+		return;
+	}
+
+	wchar_t rec_txt[1000]{ L"\0" };
+	
+	std::wifstream help(help_file);
+	help >> result;
+	
+	for (int i = 0; i < result; ++i)
+	{
+		int letter = 0;
+		help >> letter;
+		rec_txt[i] = static_cast<wchar_t>(letter);
+	}
+	help.close();
+
+	Draw->BeginDraw();
+	Draw->Clear(D2D1::ColorF(D2D1::ColorF::Azure));
+	if (statBrush && b1BckgBrush && b2BckgBrush && b3BckgBrush && fieldBrush && txtBrush && hgltBrush && inactBrush
+		&& nrmFormat)
+	{
+		Draw->FillRectangle(D2D1::RectF(0, 0, scr_width, 50.0f), statBrush);
+		Draw->FillRectangle(D2D1::RectF(0, 50.0f, scr_width, scr_height), fieldBrush);
+		Draw->FillRoundedRectangle(D2D1::RoundedRect(b1Rect, 20.0f, 25.0f), b1BckgBrush);
+		Draw->FillRoundedRectangle(D2D1::RoundedRect(b2Rect, 20.0f, 25.0f), b2BckgBrush);
+		Draw->FillRoundedRectangle(D2D1::RoundedRect(b3Rect, 20.0f, 25.0f), b3BckgBrush);
+
+		if (name_set)Draw->DrawTextW(L"ИМЕ НА САПЬОР", 14, nrmFormat, b1TxtRect, inactBrush);
+		else
+		{
+			if (!b1Hglt)Draw->DrawTextW(L"ИМЕ НА САПЬОР", 14, nrmFormat, b1TxtRect, txtBrush);
+			else Draw->DrawTextW(L"ИМЕ НА САПЬОР", 14, nrmFormat, b1TxtRect, hgltBrush);
+		}
+		if (!b2Hglt)Draw->DrawTextW(L"ЗВУЦИ ON / OFF", 15, nrmFormat, b2TxtRect, txtBrush);
+		else Draw->DrawTextW(L"ЗВУЦИ ON / OFF", 15, nrmFormat, b2TxtRect, hgltBrush);
+		if (!b3Hglt)Draw->DrawTextW(L"ПОМОЩ ЗА ИГРАТА", 16, nrmFormat, b3TxtRect, txtBrush);
+		else Draw->DrawTextW(L"ПОМОЩ ЗА ИГРАТА", 16, nrmFormat, b3TxtRect, hgltBrush);
+	}
+	if (midFormat && txtBrush)
+		Draw->DrawTextW(rec_txt, result, midFormat, D2D1::RectF(20.0f, 80.0f, scr_width, scr_height), txtBrush);
+	Draw->EndDraw();
+
+	if (sound)mciSendString(L"play .\\res\\snd\\help.wav", NULL, NULL, NULL);
+}
+
 
 INT_PTR CALLBACK DlgProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -692,6 +746,11 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 		{
 			if (LOWORD(lParam) * scale_x >= b1Rect.left && LOWORD(lParam) * scale_x <= b1Rect.right)
 			{
+				if (name_set)
+				{
+					if (sound)mciSendString(L"play .\\res\\snd\\negative.wav", NULL, NULL, NULL);
+					break;
+				}
 				if (sound)mciSendString(L"play .\\res\\snd\\select.wav", NULL, NULL, NULL);
 				if (DialogBox(bIns, MAKEINTRESOURCE(IDD_PLAYER), hwnd, &DlgProc) == IDOK)name_set = true;
 				break;
@@ -712,7 +771,23 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 					break;
 				}
 			}
-
+			if (LOWORD(lParam) * scale_x >= b3Rect.left && LOWORD(lParam) * scale_x <= b3Rect.right)
+			{
+				if(sound)mciSendString(L"play .\\res\\snd\\select.wav", NULL, NULL, NULL);
+				if (!show_help)
+				{
+					show_help = true;
+					pause = true;
+					ShowHelp();
+					break;
+				}
+				else
+				{
+					show_help = false;
+					pause = false;
+					break;
+				}
+			}
 
 			break;
 		}
@@ -813,11 +888,6 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 			}
 		}
 		break;
-
-
-
-
-
 
 	default: return DefWindowProc(hwnd, ReceivedMsg, wParam, lParam);
 	}
@@ -1262,7 +1332,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 				else break;
 			}
 
-			Draw->DrawTextW(stat_txt, stat_size, midFormat, D2D1::RectF(10.0f, ground + 5.0f, scr_width, scr_height), txtBrush);
+			Draw->DrawTextW(stat_txt, stat_size, midFormat, D2D1::RectF(2.0f, ground + 5.0f, scr_width, scr_height), txtBrush);
 		}
 
 
