@@ -401,20 +401,20 @@ void LevelUp()
 
 	vTiles.clear();
 	if(Grid)
-	for (int rows = 0; rows < current_level_rows; ++rows)
-	{
-		for (int cols = 0; cols < current_level_cols; ++cols)
+		for (int rows = 0; rows < current_level_rows; ++rows)
 		{
-			TILEINFO dummy{};
-			FRECT temp{ Grid->GetTileDims(rows,cols) };
-			dummy.dims.left = temp.left;
-			dummy.dims.right = temp.right;
-			dummy.dims.top = temp.up;
-			dummy.dims.bottom = temp.down;
-			dummy.number = rows * current_level_cols + cols;
-			vTiles.push_back(dummy);
+			for (int cols = 0; cols < current_level_cols; ++cols)
+			{
+				TILEINFO dummy{};
+				FRECT temp{ Grid->GetTileDims(rows,cols) };
+				dummy.dims.left = temp.left;
+				dummy.dims.right = temp.right;
+				dummy.dims.top = temp.up;
+				dummy.dims.bottom = temp.down;
+				dummy.number = rows * current_level_cols + cols;
+				vTiles.push_back(dummy);
+			}
 		}
-	}
 }
 void HallOfFame()
 {
@@ -518,7 +518,156 @@ void ShowHelp()
 
 	if (sound)mciSendString(L"play .\\res\\snd\\help.wav", NULL, NULL, NULL);
 }
+void SaveGame()
+{
+	int result = 0;
+	CheckFile(save_file, &result);
+	if (result == FILE_EXIST)
+	{
+		if (sound)mciSendString(L"play .\\res\\data\\exclamation.wav", NULL, NULL, NULL);
+		if (MessageBox(bHwnd, L"Има предишна записана игра !\n\nНаистина ли я презаписваш ?",
+			L"Презапис !", MB_YESNO | MB_APPLMODAL | MB_ICONQUESTION) == IDNO)return;
+	}
 
+	std::wofstream save(save_file);
+
+	save << level << std::endl;
+	save << score << std::endl;
+	save << mins << std::endl;
+	save << secs << std::endl;
+
+	save << level_skipped << std::endl;
+	save << bomb_exploded << std::endl;
+	save << turn_the_game << std::endl;
+	save << name_set << std::endl;
+
+	for (int i = 0; i < 16; ++i)save << static_cast<int>(current_player[i]) << std::endl;
+
+	for (int row = 0; row < current_level_rows; ++row)
+	{
+		for (int col = 0; col < current_level_cols; ++col)
+		{
+			save << Grid->ShowTileInfo(row, col) << std::endl;
+			save << Grid->IsTileSelected(row, col) << std::endl;
+		}
+	}
+
+	save.close();
+
+	if (sound)mciSendString(L"play .\\res\\snd\\save.wav", NULL, NULL, NULL);
+
+	MessageBox(bHwnd, L"Играта е запазена !", L"Запис !", MB_OK | MB_APPLMODAL | MB_ICONINFORMATION);
+}
+void LoadGame()
+{
+	int result = 0;
+	CheckFile(save_file, &result);
+	if (result == FILE_EXIST)
+	{
+		if (sound)mciSendString(L"play .\\res\\data\\exclamation.wav", NULL, NULL, NULL);
+		if (MessageBox(bHwnd, L"Настоящата игра ще бъде загубена !\n\nНаистина ли я презаписваш ?",
+			L"Презапис !", MB_YESNO | MB_APPLMODAL | MB_ICONQUESTION) == IDNO)return;
+	}
+	else
+	{
+		if (sound)mciSendString(L"play .\\res\\snd\\negative.wav", NULL, NULL, NULL);
+		MessageBox(bHwnd, L"Липсва записана игра !\n\nПостарай се повече !", L"Липсва файл",
+			MB_OK | MB_APPLMODAL | MB_ICONINFORMATION);
+		return;
+	}
+
+	delete Grid;
+	Grid = nullptr;
+	vTiles.clear();
+
+	std::wifstream save(save_file);
+
+	save >> level;
+
+	switch (level)
+	{
+	case 1:
+		Grid = new dll::GRID(LEVEL1_ROWS, LEVEL1_COLS, 1);
+		current_level_rows = LEVEL1_ROWS;
+		current_level_cols = LEVEL1_COLS;
+		break;
+
+	case 2:
+		Grid = new dll::GRID(LEVEL2_ROWS, LEVEL2_COLS, 2);
+		current_level_rows = LEVEL2_ROWS;
+		current_level_cols = LEVEL2_COLS;
+		break;
+
+	case 3:
+		Grid = new dll::GRID(LEVEL3_ROWS, LEVEL3_COLS, 3);
+		current_level_rows = LEVEL3_ROWS;
+		current_level_cols = LEVEL3_COLS;
+		break;
+
+	case 4:
+		Grid = new dll::GRID(LEVEL4_ROWS, LEVEL4_COLS, 4);
+		current_level_rows = LEVEL4_ROWS;
+		current_level_cols = LEVEL4_COLS;
+		break;
+
+	default: turn_the_game = true;
+	}
+
+	save >> score;
+	save >> mins;
+	save >> secs;
+
+	save >> level_skipped;
+	save >> bomb_exploded;
+	save >> turn_the_game;
+	
+	if (turn_the_game || bomb_exploded)GameOver();
+	
+	save >> name_set;
+
+	for (int i = 0; i < 16; ++i)
+	{
+		int letter = 0;
+		save >> letter;
+		current_player[i] = static_cast<wchar_t>(letter);
+	}
+
+	for (int row = 0; row < current_level_rows; ++row)
+	{
+		for (int col = 0; col < current_level_cols; ++col)
+		{
+			int tcontent = 0;
+			bool tactive = 0;
+
+			save >> tcontent;
+			save >> tactive;
+
+			Grid->SetTileInfo(row, col, tcontent, tactive);
+		}
+	}
+
+	save.close();
+
+	if (Grid)
+		for (int rows = 0; rows < current_level_rows; ++rows)
+		{
+			for (int cols = 0; cols < current_level_cols; ++cols)
+			{
+				TILEINFO dummy{};
+				FRECT temp{ Grid->GetTileDims(rows,cols) };
+				dummy.dims.left = temp.left;
+				dummy.dims.right = temp.right;
+				dummy.dims.top = temp.up;
+				dummy.dims.bottom = temp.down;
+				dummy.number = rows * current_level_cols + cols;
+				vTiles.push_back(dummy);
+			}
+		}
+
+	if (sound)mciSendString(L"play .\\res\\snd\\save.wav", NULL, NULL, NULL);
+
+	MessageBox(bHwnd, L"Играта е заредена !", L"Зареждане !", MB_OK | MB_APPLMODAL | MB_ICONINFORMATION);
+}
 
 INT_PTR CALLBACK DlgProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -731,7 +880,17 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 			SendMessage(hwnd, WM_CLOSE, NULL, NULL);
 			break;
 
+		case mSave:
+			pause = true;
+			SaveGame();
+			pause = false;
+			break;
 
+		case mLoad:
+			pause = true;
+			LoadGame();
+			pause = false;
+			break;
 
 		case mHoF:
 			pause = true;
