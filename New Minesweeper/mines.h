@@ -92,6 +92,7 @@ namespace dll
 		bool IsTileSelected(int row, int col) const;
 		int SelectTile(int row, int col);
 		int ShowTileInfo(int row, int col);
+		void SetTileInfo(int row, int col, int content, bool active);
 		FRECT GetTileDims(int row, int col) const;
 	};
 
