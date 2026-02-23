@@ -416,6 +416,55 @@ void LevelUp()
 		}
 	}
 }
+void HallOfFame()
+{
+	int result = 0;
+	CheckFile(record_file, &result);
+	if (result == FILE_NOT_EXIST)
+	{
+		if (sound)mciSendString(L"play .\\res\\snd\\negative.wav", NULL, NULL, NULL);
+		MessageBox(bHwnd, L"Липсва рекорд на играта !\n\nПостарай се повече !", L"Липсва файл",
+			MB_OK | MB_APPLMODAL | MB_ICONINFORMATION);
+		return;
+	}
+
+	wchar_t rec_txt[100]{ L"НАЙ-ВЕЛИК САПЬОР: " };
+	wchar_t saved_player[16]{ L"\0" };
+	wchar_t saved_score[3]{ L"\0" };
+
+	std::wifstream rec(record_file);
+	rec >> result;
+	wsprintf(saved_score, L"%d", result);
+	for (int i = 0; i < 16; ++i)
+	{
+		int letter = 0;
+		rec >> letter;
+		saved_player[i] = static_cast<wchar_t>(letter);
+	}
+	rec.close();
+
+	wcscat_s(rec_txt, saved_player);
+	wcscat_s(rec_txt, L"\n\nСВЕТОВЕН РЕКОРД: ");
+	wcscat_s(rec_txt, saved_score);
+
+	result = 0;
+
+	for (int i = 0; i < 100; ++i)
+	{
+		if (rec_txt[i] != '\0')++result;
+		else break;
+	}
+
+	Draw->BeginDraw();
+	Draw->Clear(D2D1::ColorF(D2D1::ColorF::Azure));
+	if (midFormat && txtBrush)
+		Draw->DrawTextW(rec_txt, result, midFormat, D2D1::RectF(150.0f, 80.0f, scr_width, scr_height), txtBrush);
+	Draw->EndDraw();
+
+	if (sound)mciSendString(L"play .\\res\\snd\\show_rec.wav", NULL, NULL, NULL);
+	Sleep(4000);
+
+}
 
 INT_PTR CALLBACK DlgProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -629,10 +678,44 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 			break;
 
 
+
+		case mHoF:
+			pause = true;
+			HallOfFame();
+			pause = false;
+			break;
 		}
 		break;
 
 	case WM_LBUTTONDOWN:
+		if (HIWORD(lParam) * scale_y <= 50)
+		{
+			if (LOWORD(lParam) * scale_x >= b1Rect.left && LOWORD(lParam) * scale_x <= b1Rect.right)
+			{
+				if (sound)mciSendString(L"play .\\res\\snd\\select.wav", NULL, NULL, NULL);
+				if (DialogBox(bIns, MAKEINTRESOURCE(IDD_PLAYER), hwnd, &DlgProc) == IDOK)name_set = true;
+				break;
+			}
+			if (LOWORD(lParam) * scale_x >= b2Rect.left && LOWORD(lParam) * scale_x <= b2Rect.right)
+			{
+				mciSendString(L"play .\\res\\snd\\select.wav", NULL, NULL, NULL);
+				if (sound)
+				{
+					PlaySound(NULL, NULL, NULL);
+					sound = false;
+					break;
+				}
+				else
+				{
+					PlaySound(sound_file, NULL, SND_ASYNC | SND_LOOP);
+					sound = true;
+					break;
+				}
+			}
+
+
+			break;
+		}
 		if (bomb_exploded)break;
 		if (Grid && !vTiles.empty())
 		{
