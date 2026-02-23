@@ -1148,7 +1148,39 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 			if (Grid->MinesRemaining() == 0)LevelUp();
 		}
 
+		if (txtBrush && midFormat)
+		{
+			wchar_t stat_txt[150]{ L"сапьор: " };
+			wchar_t add[5]{ L"\0" };
+			int stat_size = 0;
+		
+			wcscat_s(stat_txt, current_player);
 
+			wcscat_s(stat_txt, L", ниво: ");
+			wsprintf(add, L"%d", level);
+			wcscat_s(stat_txt, add);
+
+			wcscat_s(stat_txt, L", резултат: ");
+			wsprintf(add, L"%d", score);
+			wcscat_s(stat_txt, add);
+
+			wcscat_s(stat_txt, L", време: ");
+			if (mins < 10)wcscat_s(stat_txt, L"0");
+			wsprintf(add, L"%d", mins);
+			wcscat_s(stat_txt, add);
+			if (mins < 10)wcscat_s(stat_txt, L" : ");
+			if (secs - mins * 60 < 10)wcscat_s(stat_txt, L"0");
+			wsprintf(add, L"%d", secs - mins * 60);
+			wcscat_s(stat_txt, add);
+
+			for (int i = 0; i < 150; ++i)
+			{
+				if (stat_txt[i] != '\0')++stat_size;
+				else break;
+			}
+
+			Draw->DrawTextW(stat_txt, stat_size, midFormat, D2D1::RectF(10.0f, ground + 5.0f, scr_width, scr_height), txtBrush);
+		}
 
 
 		//////////////////////////

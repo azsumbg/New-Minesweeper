@@ -12,7 +12,7 @@ constexpr float scr_width{ 800.0f };
 constexpr float scr_height{ 600.0f };
 
 constexpr float sky{ 50.0f };
-constexpr float ground{ 50.0f };
+constexpr float ground{ 550.0f };
 
 constexpr float CELL_DIM{ 50.0f };
 
